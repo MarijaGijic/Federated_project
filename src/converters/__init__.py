@@ -1,1 +1,1 @@
-from inbreast_converter import INbreastConverter
+from .inbreast_converter import INbreastConverter
