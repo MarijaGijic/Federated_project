@@ -3,11 +3,11 @@ import os
 import pandas as pd
 import numpy as np
 
-from converters.base_converter import BaseConverter
-from utils.xml_utils import extract_rois_from_xml
-from utils.dicom_utils import read_dicom_image
-from utils.image_utils import save_png_img, save_annotations_csv
-from utils.bbox_utils import points_to_bbox
+from .base_converter import BaseConverter   
+from ..utils.xml_utils import extract_rois_from_xml
+from ..utils.dicom_utils import read_dicom_image
+from ..utils.image_utils import save_png_img, save_annotations_csv
+from ..utils.bbox_utils import points_to_bbox
 
 class INbreastConverter(BaseConverter):
 
