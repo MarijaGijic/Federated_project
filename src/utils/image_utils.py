@@ -22,6 +22,7 @@ def save_png_pair(image, mask, images_dir, masks_dir, prefix):
     return img_path, mask_path
 
 def save_png_img(image, images_dir, prefix):
+    os.makedirs(images_dir, exist_ok=True)
     img_path = os.path.join(images_dir, f"{prefix}.png")
     cv2.imwrite(img_path, image)
     return img_path

@@ -62,14 +62,14 @@ class INbreastConverter(BaseConverter):
         meta = self._read_metadata(prefix)
 
         # if no lesions -> negative sample
-        if not xml_file.exist():
+        if not xml_file.exists():
 
             self.records.append({
                 "image_name": img_name,
-                "bbox_xmin": "",
-                "bbox_ymin": "",
-                "bbox_width": "",
-                "bbox_height": "",
+                "bbox_xmin": np.nan,
+                "bbox_ymin": np.nan,
+                "bbox_width": np.nan,
+                "bbox_height": np.nan,
                 "lesion_type": "normal",
                 "bi_rads": meta["bi_rads"],
                 "density": meta["density"],
