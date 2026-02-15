@@ -38,7 +38,7 @@ def extract_rois_from_xml(xml_file):
             for point in points_px_array.findall('string'):
                 x_str, y_str = point.text.strip('()').split(',')
                 x, y = int(round(float(x_str))), int(round(float(y_str)))
-                point.add((x, y))
+                point.append((x, y))
             
             if points:
                 rois.append({
