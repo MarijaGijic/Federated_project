@@ -106,7 +106,10 @@ class CBISDDSMConverter(BaseConverter):
     def _process_csv(self, csv_path: Path, abnormality_type: str):
         df = pd.read_csv(csv_path)
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-        for _, row in df.iterrows():
+        total = len(df)
+        for i, (_, row) in enumerate(df.iterrows()):
+            if i % 50 == 0:
+                print(f"  [{csv_path.name}] {i}/{total}")
             self._process_row(row, abnormality_type)
 
     def _process_row(self, row: pd.Series, abnormality_type: str):
