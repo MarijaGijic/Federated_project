@@ -1,6 +1,6 @@
 import os
 import argparse
-from converters.inbreast_converter import INbreastConverter
+from src.converters.inbreast_converter import INbreastConverter
 
 def main():
     parser = argparse.ArgumentParser(description="Prepare INbreast dataset for federated learning")
