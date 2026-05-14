@@ -83,6 +83,7 @@ class CBISDDSMConverter(BaseConverter):
         self.full_mammo_map = _build_uid_map(dicom_info, jpeg_base, "full mammogram images")
         self.roi_map        = _build_uid_map(dicom_info, jpeg_base, "ROI mask images")
         self.records = []
+        self.saved_images = set()  # track already-saved mammograms to avoid duplicates
 
     def convert(self):
         csv_files = [
@@ -120,11 +121,15 @@ class CBISDDSMConverter(BaseConverter):
         if image is None:
             return
 
-        patient_id     = str(row.get("patient_id", img_uid)).replace(" ", "_")
-        abnormality_id = str(row.get("abnormality_id", "0"))
-        prefix   = f"{patient_id}_{abnormality_id}"
+        patient_id = str(row.get("patient_id", img_uid)).replace(" ", "_")
+        view       = str(row.get("image_view", row.get("view", ""))).strip()
+        laterality = str(row.get("left_or_right_breast", row.get("side", ""))).strip()
+        prefix   = f"{patient_id}_{laterality}_{view}"
         img_name = f"{prefix}.png"
-        save_png_img(image, self.images_dir, prefix)
+
+        if prefix not in self.saved_images:
+            save_png_img(image, self.images_dir, prefix)
+            self.saved_images.add(prefix)
 
         # ── Bounding box from ROI mask ────────────────────────────────────
         bbox_xmin = bbox_ymin = bbox_w = bbox_h = np.nan
@@ -153,7 +158,7 @@ class CBISDDSMConverter(BaseConverter):
             "pathology":      str(row.get("pathology", "")).strip(),
             "bi_rads":        row.get("assessment", 0),
             "breast_density": row.get("breast_density", 0),
-            "laterality":     str(row.get("left_or_right_breast", row.get("side", "unknown"))).strip(),
-            "view":           str(row.get("image_view", row.get("view", "unknown"))).strip(),
+            "laterality":     laterality or "unknown",
+            "view":           view or "unknown",
             "dataset_name":   "CBIS-DDSM",
         }))
