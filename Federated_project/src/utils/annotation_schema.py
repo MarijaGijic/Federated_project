@@ -21,7 +21,7 @@ CANONICAL_COLUMNS = [
     "breast_density",   # int  — 0 = unknown, 1-4  (ACR density)
     "laterality",       # str  — "L", "R", "unknown"
     "view",             # str  — "CC", "MLO", "unknown"
-    "dataset_name",     # str  — {INbreast, CBIS-DDSM, MIAS, VinDr-Mammo}
+    "dataset_name",     # str  — {INbreast, CBIS-DDSM, MIAS}
 ]
 
 VALID_LESION_TYPES = {"mass", "calcification", "distortion", "asymmetry", "normal", "other"}
@@ -51,16 +51,6 @@ LESION_TYPE_MAP: dict[str, str] = {
     "asym": "asymmetry",
     "norm": "normal",
 
-    # VinDr-Mammo (finding_categories column)
-    "suspicious calcification": "calcification",
-    "architectural distortion": "distortion",
-    "focal asymmetry": "asymmetry",
-    "global asymmetry": "asymmetry",
-    "no finding": "normal",
-    "skin thickening": "other",
-    "nipple retraction": "other",
-    "suspicious lymph node": "other",
-    "axillary adenopathy": "other",
 }
 
 PATHOLOGY_MAP: dict[str, str] = {

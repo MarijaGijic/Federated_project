@@ -2,8 +2,9 @@
 data:
   # Each entry is a prepared client directory (output of prepare_*.py scripts)
   client_dirs:
-    - data/client1   # e.g. INbreast
-    - data/client2   # e.g. CBIS-DDSM
+    - data/client1   # INbreast
+    - data/client2   # CBIS-DDSM
+    - data/client3   # MIAS
   image_size: 512    # resize all images to this square
 
 # ── Model ────────────────────────────────────────────────────────────────────
