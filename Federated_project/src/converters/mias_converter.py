@@ -71,7 +71,7 @@ class MIASConverter(BaseConverter):
         self.records  = []
 
     def convert(self):
-        txt_candidates = ["all-mias.txt", "all_mias.txt", "ALL-MIAS.txt"]
+        txt_candidates = ["Info.txt", "info.txt", "all-mias.txt", "all_mias.txt", "ALL-MIAS.txt"]
         txt_path = None
         for name in txt_candidates:
             candidate = self.raw_path / name
@@ -99,7 +99,9 @@ class MIASConverter(BaseConverter):
         # ── Load PGM image ────────────────────────────────────────────────
         pgm_path = self.raw_path / f"{refnum}.pgm"
         if not pgm_path.exists():
-            print(f"  [MIAS] Image not found: {pgm_path}")
+            pgm_path = self.raw_path / "all-mias" / f"{refnum}.pgm"
+        if not pgm_path.exists():
+            print(f"  [MIAS] Image not found: {refnum}.pgm")
             return
 
         image = cv2.imread(str(pgm_path), cv2.IMREAD_GRAYSCALE)
