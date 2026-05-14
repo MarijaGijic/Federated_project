@@ -1,0 +1,20 @@
+# Data processing
+numpy
+pandas
+opencv-python
+pydicom
+Pillow
+tqdm
+openpyxl
+
+# Deep learning
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Federated learning
+flwr[simulation]>=1.7.0
+
+# Config & utilities
+pyyaml
+scikit-learn
+matplotlib
