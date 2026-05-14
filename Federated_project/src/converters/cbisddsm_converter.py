@@ -43,8 +43,8 @@ def _bbox_from_mask(mask_arr: np.ndarray):
 def _uid_from_csv_path(csv_path_value: str) -> str:
     """Extract the Series UID from a CSV image_file_path entry."""
     parts = str(csv_path_value).strip().split("/")
-    # path format: <Case_folder>/<UID>/<filename>
-    return parts[1] if len(parts) >= 2 else ""
+    # path format: <Case_folder>/<StudyUID>/<SeriesUID>/<filename>
+    return parts[2] if len(parts) >= 3 else ""
 
 
 def _build_uid_map(dicom_info_path: Path, jpeg_base: Path, series_desc: str) -> dict:
