@@ -40,7 +40,7 @@ def _parse_mias_txt(txt_path: Path) -> pd.DataFrame:
     with open(txt_path, "r") as fh:
         for line in fh:
             line = line.strip()
-            if not line or line.startswith("#"):
+            if not line or line.startswith("#") or line.lower().startswith("refnum"):
                 continue
             parts = line.split()
             if len(parts) < 3:
