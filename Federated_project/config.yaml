@@ -5,18 +5,18 @@ data:
     - data/client1   # INbreast
     - data/client2   # CBIS-DDSM
     - data/client3   # MIAS
-  image_size: 512    # resize all images to this square
+  image_size: 256    # resize all images to this square
 
 # ── Model ────────────────────────────────────────────────────────────────────
 model:
   in_channels: 1
   out_channels: 1
-  features: [64, 128, 256, 512]
+  features: [32, 64, 128, 256]
 
 # ── Local training (per client per round) ────────────────────────────────────
 training:
   local_epochs: 3
-  batch_size: 4
+  batch_size: 2
   learning_rate: 0.001
 
 # ── Federated learning ───────────────────────────────────────────────────────

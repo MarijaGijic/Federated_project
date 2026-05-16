@@ -74,11 +74,18 @@ def main():
     print(f"  Local epochs : {cfg['training']['local_epochs']}")
     print(f"  Image size   : {cfg['data']['image_size']}x{cfg['data']['image_size']}\n")
 
+    # Run 1 client at a time: num_gpus=1.0 caps concurrency to 1 (one GPU total),
+    # which prevents parallel clients from exhausting RAM on constrained runtimes.
+    import torch
+    num_gpus = 1.0 if torch.cuda.is_available() else 0.0
+    client_resources = {"num_cpus": 1, "num_gpus": num_gpus}
+
     history = fl.simulation.start_simulation(
         client_fn=client_fn,
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=cfg["federated"]["num_rounds"]),
         strategy=strategy,
+        client_resources=client_resources,
     )
 
     # ── Save training history ─────────────────────────────────────────────────
