@@ -24,6 +24,8 @@ from src.federated.server import build_strategy
 
 
 def load_config(path: str) -> dict:
+    if not os.path.isabs(path):
+        path = os.path.join(ROOT, path)
     with open(path) as f:
         return yaml.safe_load(f)
 
