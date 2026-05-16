@@ -44,18 +44,14 @@ class INbreastConverter(BaseConverter):
 
         if not xml_file.exists():
             self.records.append(normalize_row({
-                "image_name":     img_name,
-                "bbox_xmin":      np.nan,
-                "bbox_ymin":      np.nan,
-                "bbox_width":     np.nan,
-                "bbox_height":    np.nan,
-                "lesion_type":    "normal",
-                "pathology":      None,
-                "bi_rads":        meta["bi_rads"],
-                "breast_density": meta["breast_density"],
-                "laterality":     meta["laterality"],
-                "view":           meta["view"],
-                "dataset_name":   "INbreast",
+                "image_name":  img_name,
+                "bbox_xmin":   np.nan,
+                "bbox_ymin":   np.nan,
+                "bbox_width":  np.nan,
+                "bbox_height": np.nan,
+                "lesion_type": "normal",
+                "pathology":   "normal",
+                "dataset_name": "INbreast",
             }))
             return
 
@@ -68,25 +64,20 @@ class INbreastConverter(BaseConverter):
             if bbox is None:
                 continue
             self.records.append(normalize_row({
-                "image_name":     img_name,
-                "bbox_xmin":      float(bbox[0]),
-                "bbox_ymin":      float(bbox[1]),
-                "bbox_width":     float(bbox[2]),
-                "bbox_height":    float(bbox[3]),
-                "lesion_type":    roi.get("lesion_type", meta["lesion_type"]),
-                "pathology":      None,           # derived from bi_rads in normalize_row
-                "bi_rads":        meta["bi_rads"],
-                "breast_density": meta["breast_density"],
-                "laterality":     meta["laterality"],
-                "view":           meta["view"],
-                "dataset_name":   "INbreast",
+                "image_name":  img_name,
+                "bbox_xmin":   float(bbox[0]),
+                "bbox_ymin":   float(bbox[1]),
+                "bbox_width":  float(bbox[2]),
+                "bbox_height": float(bbox[3]),
+                "lesion_type": roi.get("lesion_type", meta["lesion_type"]),
+                "pathology":   "unknown",
+                "dataset_name": "INbreast",
             }))
 
     def _read_metadata(self, prefix) -> dict:
         row = self.df[self.df["File Name"] == float(prefix)]
         if row.empty:
-            return {"bi_rads": 0, "breast_density": 0, "laterality": "unknown",
-                    "view": "unknown", "lesion_type": None}
+            return {"lesion_type": None}
         row = row.iloc[0]
 
         lesion_types = []
@@ -95,9 +86,5 @@ class INbreastConverter(BaseConverter):
                 lesion_types.append(col.strip())
 
         return {
-            "bi_rads":        row.get("Bi-Rads", 0),
-            "breast_density": row.get("ACR", 0),
-            "laterality":     str(row.get("Laterality", "unknown")),
-            "view":           str(row.get("View", "unknown")),
-            "lesion_type":    lesion_types[0] if lesion_types else None,
+            "lesion_type": lesion_types[0] if lesion_types else None,
         }

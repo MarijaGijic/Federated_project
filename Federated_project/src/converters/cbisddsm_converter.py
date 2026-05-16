@@ -152,16 +152,12 @@ class CBISDDSMConverter(BaseConverter):
 
         # ── Metadata ──────────────────────────────────────────────────────
         self.records.append(normalize_row({
-            "image_name":     img_name,
-            "bbox_xmin":      bbox_xmin,
-            "bbox_ymin":      bbox_ymin,
-            "bbox_width":     bbox_w,
-            "bbox_height":    bbox_h,
-            "lesion_type":    abnormality_type,
-            "pathology":      str(row.get("pathology", "")).strip(),
-            "bi_rads":        row.get("assessment", 0),
-            "breast_density": row.get("breast_density", 0),
-            "laterality":     laterality or "unknown",
-            "view":           view or "unknown",
-            "dataset_name":   "CBIS-DDSM",
+            "image_name":  img_name,
+            "bbox_xmin":   bbox_xmin,
+            "bbox_ymin":   bbox_ymin,
+            "bbox_width":  bbox_w,
+            "bbox_height": bbox_h,
+            "lesion_type": abnormality_type,
+            "pathology":   str(row.get("pathology", "")).strip(),
+            "dataset_name": "CBIS-DDSM",
         }))

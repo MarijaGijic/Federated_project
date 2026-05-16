@@ -1,5 +1,5 @@
 """
-Canonical annotation schema shared by all four database converters.
+Canonical annotation schema shared by all database converters.
 
 Every converter outputs a CSV with exactly these columns in this order.
 """
@@ -10,24 +10,19 @@ import pandas as pd
 # ── Canonical column order ────────────────────────────────────────────────────
 
 CANONICAL_COLUMNS = [
-    "image_name",       # str  — PNG filename (e.g. "20010001.png")
+    "image_name",       # str   — PNG filename (e.g. "20010001.png")
     "bbox_xmin",        # float — NaN for normal / no-finding cases
     "bbox_ymin",        # float
     "bbox_width",       # float
     "bbox_height",      # float
-    "lesion_type",      # str  — see VALID_LESION_TYPES
-    "pathology",        # str  — see VALID_PATHOLOGIES
-    "bi_rads",          # int  — 0 = unknown, 1-6
-    "breast_density",   # int  — 0 = unknown, 1-4  (ACR density)
-    "laterality",       # str  — "L", "R", "unknown"
-    "view",             # str  — "CC", "MLO", "unknown"
-    "dataset_name",     # str  — {INbreast, CBIS-DDSM, MIAS}
+    "lesion_type",      # str   — see VALID_LESION_TYPES
+    "pathology",        # str   — see VALID_PATHOLOGIES
+    "label",            # int   — 0 = no lesion, 1 = lesion present
+    "dataset_name",     # str   — {INbreast, CBIS-DDSM, MIAS}
 ]
 
 VALID_LESION_TYPES = {"mass", "calcification", "distortion", "asymmetry", "normal", "other"}
-VALID_PATHOLOGIES   = {"benign", "malignant", "probably_benign", "normal", "unknown"}
-VALID_LATERALITIES  = {"L", "R", "unknown"}
-VALID_VIEWS         = {"CC", "MLO", "unknown"}
+VALID_PATHOLOGIES  = {"benign", "malignant", "probably_benign", "normal", "unknown"}
 
 # ── Normalization maps ────────────────────────────────────────────────────────
 
@@ -50,7 +45,6 @@ LESION_TYPE_MAP: dict[str, str] = {
     "arch": "distortion",
     "asym": "asymmetry",
     "norm": "normal",
-
 }
 
 PATHOLOGY_MAP: dict[str, str] = {
@@ -69,46 +63,6 @@ PATHOLOGY_MAP: dict[str, str] = {
     "unknown": "unknown",
 }
 
-LATERALITY_MAP: dict[str, str] = {
-    "left": "L", "l": "L",
-    "right": "R", "r": "R",
-    "unknown": "unknown", "": "unknown",
-}
-
-VIEW_MAP: dict[str, str] = {
-    "cc": "CC",
-    "mlo": "MLO",
-    "unknown": "unknown", "": "unknown",
-}
-
-DENSITY_MAP: dict[str, int] = {
-    # MIAS background tissue → ACR density approximation
-    "f": 1,   # fatty
-    "g": 2,   # fatty-glandular
-    "d": 4,   # dense
-    # Strings that already are numbers
-    "1": 1, "2": 2, "3": 3, "4": 4,
-}
-
-# ── Derivation helpers ────────────────────────────────────────────────────────
-
-def birads_to_pathology(birads) -> str:
-    """Derive pathology label from BI-RADS score when not explicitly given."""
-    try:
-        b = int(float(birads))
-    except (TypeError, ValueError):
-        return "unknown"
-    if b == 0:
-        return "unknown"
-    if b == 1:
-        return "normal"
-    if b in (2, 3):
-        return "benign" if b == 2 else "probably_benign"
-    if b in (4, 5, 6):
-        return "malignant"
-    return "unknown"
-
-
 # ── Normalization ─────────────────────────────────────────────────────────────
 
 def _norm(value, mapping: dict, default: str = "unknown") -> str:
@@ -122,33 +76,14 @@ def normalize_row(row: dict) -> dict:
     row = dict(row)
 
     row["lesion_type"] = _norm(row.get("lesion_type"), LESION_TYPE_MAP, "other")
-    row["laterality"]  = _norm(row.get("laterality"),  LATERALITY_MAP,  "unknown")
-    row["view"]        = _norm(row.get("view"),         VIEW_MAP,        "unknown")
 
-    # Pathology: use explicit value if present, else derive from BI-RADS
     raw_path = str(row.get("pathology", "")).strip().lower()
     if raw_path in PATHOLOGY_MAP:
         row["pathology"] = PATHOLOGY_MAP[raw_path]
-    elif raw_path == "" or pd.isna(row.get("pathology")):
-        row["pathology"] = birads_to_pathology(row.get("bi_rads"))
     else:
         row["pathology"] = "unknown"
 
-    # bi_rads: coerce to int, 0 = unknown
-    try:
-        row["bi_rads"] = int(float(row.get("bi_rads", 0) or 0))
-    except (TypeError, ValueError):
-        row["bi_rads"] = 0
-
-    # breast_density: coerce to int, 0 = unknown
-    raw_density = str(row.get("breast_density", "")).strip().lower()
-    if raw_density in DENSITY_MAP:
-        row["breast_density"] = DENSITY_MAP[raw_density]
-    else:
-        try:
-            row["breast_density"] = int(float(raw_density))
-        except (TypeError, ValueError):
-            row["breast_density"] = 0
+    row["label"] = 0 if pd.isna(row.get("bbox_xmin")) else 1
 
     return row
 
@@ -163,7 +98,7 @@ def validate_dataframe(df: pd.DataFrame, images_dir: str) -> list[str]:
     missing_cols = [c for c in CANONICAL_COLUMNS if c not in df.columns]
     if missing_cols:
         issues.append(f"Missing columns: {missing_cols}")
-        return issues  # cannot check further
+        return issues
 
     for _, row in df.iterrows():
         img = row["image_name"]

@@ -34,8 +34,6 @@ from src.utils.annotation_schema import (
     CANONICAL_COLUMNS,
     VALID_LESION_TYPES,
     VALID_PATHOLOGIES,
-    VALID_LATERALITIES,
-    VALID_VIEWS,
     normalize_row,
 )
 
@@ -87,16 +85,6 @@ def check_and_fix_row(row: dict, images_dir: str) -> tuple[dict, list[str]]:
             if y + h > img_h:
                 row["bbox_height"] = max(1, img_h - y)
                 warnings.append(f"BBOX_OOB_HEIGHT  {img}: clipped to {row['bbox_height']:.0f}")
-
-    # bi_rads range
-    birads = int(row.get("bi_rads", 0) or 0)
-    if not (0 <= birads <= 6):
-        warnings.append(f"BAD_BIRADS       {img}: {birads}")
-
-    # density range
-    density = int(row.get("breast_density", 0) or 0)
-    if not (0 <= density <= 4):
-        warnings.append(f"BAD_DENSITY      {img}: {density}")
 
     return row, warnings
 

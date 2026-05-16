@@ -29,10 +29,7 @@ import cv2
 
 from .base_converter import BaseConverter
 from ..utils.image_utils import save_png_img, save_annotations_csv
-from ..utils.annotation_schema import CANONICAL_COLUMNS, DENSITY_MAP, normalize_row
-
-
-_TISSUE_TO_DENSITY = {"f": 1, "g": 2, "d": 4}
+from ..utils.annotation_schema import CANONICAL_COLUMNS, normalize_row
 
 
 def _parse_mias_txt(txt_path: Path) -> pd.DataFrame:
@@ -128,19 +125,13 @@ class MIASConverter(BaseConverter):
             bbox_h    = float(min(2 * r, h - bbox_ymin))
 
         # ── Metadata ──────────────────────────────────────────────────────
-        density = _TISSUE_TO_DENSITY.get(str(row["tissue"]).lower(), 0)
-
         self.records.append(normalize_row({
-            "image_name":     img_name,
-            "bbox_xmin":      bbox_xmin,
-            "bbox_ymin":      bbox_ymin,
-            "bbox_width":     bbox_w,
-            "bbox_height":    bbox_h,
-            "lesion_type":    str(row["cls"]),
-            "pathology":      str(row["severity"]),
-            "bi_rads":        0,              # not available in MIAS
-            "breast_density": density,
-            "laterality":     "unknown",      # not available in MIAS
-            "view":           "unknown",      # not available in MIAS
-            "dataset_name":   "MIAS",
+            "image_name":  img_name,
+            "bbox_xmin":   bbox_xmin,
+            "bbox_ymin":   bbox_ymin,
+            "bbox_width":  bbox_w,
+            "bbox_height": bbox_h,
+            "lesion_type": str(row["cls"]),
+            "pathology":   str(row["severity"]),
+            "dataset_name": "MIAS",
         }))
