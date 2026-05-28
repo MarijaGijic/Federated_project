@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 import flwr as fl
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset, random_split
 
 # Allow imports from src/
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -88,8 +88,17 @@ class MammographyClient(fl.client.NumPyClient):
         )
         val_size = max(1, int(0.2 * len(dataset)))
         train_size = len(dataset) - val_size
-        train_ds, val_ds = random_split(dataset, [train_size, val_size])
-        val_ds.dataset.augment = False  # no augmentation for validation
+        train_ds, val_split = random_split(dataset, [train_size, val_size])
+
+        # Build a separate no-augmentation dataset for validation using the same indices.
+        # random_split returns Subsets sharing the original dataset object, so mutating
+        # .dataset.augment would disable augmentation for training too.
+        val_dataset = MammographyDataset(
+            client_dir=client_dir,
+            image_size=config.get("image_size", 512),
+            augment=False,
+        )
+        val_ds = Subset(val_dataset, val_split.indices)
 
         bs = config.get("batch_size", 4)
         self.train_loader = DataLoader(train_ds, batch_size=bs, shuffle=True, num_workers=0)

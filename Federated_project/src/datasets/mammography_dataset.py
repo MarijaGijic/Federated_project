@@ -14,7 +14,7 @@ class MammographyDataset(Dataset):
         client_dir/
             images/          PNG images (output of converters)
             annotations.csv  columns: image_name, bbox_xmin, bbox_ymin,
-                             bbox_width, bbox_height, lesion_type, ...
+                             bbox_width, bbox_height, ...
     """
 
     def __init__(self, client_dir: str, image_size: int = 512, augment: bool = False):

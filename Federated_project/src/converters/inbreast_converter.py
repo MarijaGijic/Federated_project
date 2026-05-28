@@ -8,7 +8,7 @@ from ..utils.dicom_utils import read_dicom_image
 from ..utils.image_utils import save_png_img, save_annotations_csv
 from ..utils.bbox_utils import points_to_bbox
 from ..utils.annotation_schema import (
-    CANONICAL_COLUMNS, LESION_TYPE_MAP, normalize_row
+    CANONICAL_COLUMNS, normalize_row
 )
 
 
@@ -49,8 +49,6 @@ class INbreastConverter(BaseConverter):
                 "bbox_ymin":   np.nan,
                 "bbox_width":  np.nan,
                 "bbox_height": np.nan,
-                "lesion_type": "normal",
-                "pathology":   "normal",
                 "dataset_name": "INbreast",
             }))
             return
@@ -64,8 +62,6 @@ class INbreastConverter(BaseConverter):
                 "bbox_ymin":   np.nan,
                 "bbox_width":  np.nan,
                 "bbox_height": np.nan,
-                "lesion_type": "normal",
-                "pathology":   "normal",
                 "dataset_name": "INbreast",
             }))
             return
@@ -80,8 +76,6 @@ class INbreastConverter(BaseConverter):
                 "bbox_ymin":   float(bbox[1]),
                 "bbox_width":  float(bbox[2]),
                 "bbox_height": float(bbox[3]),
-                "lesion_type": roi.get("lesion_type", meta["lesion_type"]),
-                "pathology":   "unknown",
                 "dataset_name": "INbreast",
             }))
 

@@ -1,4 +1,6 @@
 def points_to_bbox(points):
+    if not points:
+        return None
 
     x_coords = [p[0] for p in points]
     y_coords = [p[1] for p in points]

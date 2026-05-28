@@ -32,8 +32,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.utils.annotation_schema import (
     CANONICAL_COLUMNS,
-    VALID_LESION_TYPES,
-    VALID_PATHOLOGIES,
     normalize_row,
 )
 
@@ -53,10 +51,10 @@ def check_and_fix_row(row: dict, images_dir: str) -> tuple[dict, list[str]]:
         return row, warnings
 
     # controlled vocab
-    if row.get("lesion_type") not in VALID_LESION_TYPES:
-        warnings.append(f"BAD_LESION_TYPE  {img}: '{row.get('lesion_type')}'")
-    if row.get("pathology") not in VALID_PATHOLOGIES:
-        warnings.append(f"BAD_PATHOLOGY    {img}: '{row.get('pathology')}'")
+    # if row.get("lesion_type") not in VALID_LESION_TYPES:
+    #     warnings.append(f"BAD_LESION_TYPE  {img}: '{row.get('lesion_type')}'")
+    # if row.get("pathology") not in VALID_PATHOLOGIES:
+    #     warnings.append(f"BAD_PATHOLOGY    {img}: '{row.get('pathology')}'")
 
     # bbox sanity
     has_bbox = not pd.isna(row.get("bbox_xmin"))
@@ -135,13 +133,12 @@ def validate_and_clean(df: pd.DataFrame, images_dir: str) -> tuple[pd.DataFrame,
         warn_counts[tag] = warn_counts.get(tag, 0) + 1
 
     stats = {
-        "total_rows":          len(df),
-        "duplicates_removed":  int(n_dups),
-        "images_dropped":      int(n_dropped),
-        "warnings":            warn_counts,
-        "lesion_type_counts":  df["lesion_type"].value_counts().to_dict(),
-        "pathology_counts":    df["pathology"].value_counts().to_dict(),
-        "dataset_counts":      df["dataset_name"].value_counts().to_dict(),
+        "total_rows":         len(df),
+        "duplicates_removed": int(n_dups),
+        "images_dropped":     int(n_dropped),
+        "warnings":           warn_counts,
+        "dataset_counts":     df["dataset_name"].value_counts().to_dict(),
+        "label_counts":       df["label"].value_counts().to_dict(),
     }
     return df, stats
 
@@ -188,13 +185,10 @@ def main():
         else:
             print("  No issues found.")
 
-        print(f"\n  Lesion type distribution:")
-        for lt, cnt in sorted(stats["lesion_type_counts"].items(), key=lambda x: -x[1]):
-            print(f"    {lt:<20} {cnt}")
-
-        print(f"\n  Pathology distribution:")
-        for p, cnt in sorted(stats["pathology_counts"].items(), key=lambda x: -x[1]):
-            print(f"    {p:<20} {cnt}")
+        print(f"\n  Label distribution:")
+        for lbl, cnt in sorted(stats["label_counts"].items()):
+            name = "normal" if lbl == 0 else "lesion"
+            print(f"    {lbl} ({name:<8}) {cnt}")
 
         if args.fix:
             df_clean.to_csv(ann_path, index=False)

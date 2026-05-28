@@ -131,7 +131,5 @@ class MIASConverter(BaseConverter):
             "bbox_ymin":   bbox_ymin,
             "bbox_width":  bbox_w,
             "bbox_height": bbox_h,
-            "lesion_type": str(row["cls"]),
-            "pathology":   str(row["severity"]),
             "dataset_name": "MIAS",
         }))

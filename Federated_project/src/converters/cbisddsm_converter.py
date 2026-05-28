@@ -9,6 +9,8 @@ Expected raw layout (Kaggle dataset: awsaf49/cbis-ddsm-breast-cancer-image-datas
             mass_case_description_test_set.csv
             calc_case_description_train_set.csv
             calc_case_description_test_set.csv
+            dicom_info.csv
+            meta.csv
         jpeg/
             <SeriesInstanceUID>/
                 1-NNN.jpg
@@ -43,7 +45,7 @@ def _bbox_from_mask(mask_arr: np.ndarray):
 def _uid_from_csv_path(csv_path_value: str) -> str:
     """Extract the Series UID from a CSV image_file_path entry."""
     parts = str(csv_path_value).strip().split("/")
-    # path format: <Case_folder>/<StudyUID>/<SeriesUID>/<filename>
+    # path format: <Case_folder>/<SeriesUID>/<filename>
     return parts[2] if len(parts) >= 3 else ""
 
 
@@ -157,7 +159,5 @@ class CBISDDSMConverter(BaseConverter):
             "bbox_ymin":   bbox_ymin,
             "bbox_width":  bbox_w,
             "bbox_height": bbox_h,
-            "lesion_type": abnormality_type,
-            "pathology":   str(row.get("pathology", "")).strip(),
             "dataset_name": "CBIS-DDSM",
         }))
