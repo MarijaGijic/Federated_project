@@ -57,6 +57,17 @@ class INbreastConverter(BaseConverter):
 
         rois = extract_rois_from_xml(xml_file)
         if not rois:
+            # XML present but empty or unparseable — treat as no finding
+            self.records.append(normalize_row({
+                "image_name":  img_name,
+                "bbox_xmin":   np.nan,
+                "bbox_ymin":   np.nan,
+                "bbox_width":  np.nan,
+                "bbox_height": np.nan,
+                "lesion_type": "normal",
+                "pathology":   "normal",
+                "dataset_name": "INbreast",
+            }))
             return
 
         for roi in rois:
