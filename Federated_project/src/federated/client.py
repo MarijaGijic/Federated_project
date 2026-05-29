@@ -88,7 +88,10 @@ class MammographyClient(fl.client.NumPyClient):
         )
         val_size = max(1, int(0.2 * len(dataset)))
         train_size = len(dataset) - val_size
-        train_ds, val_split = random_split(dataset, [train_size, val_size])
+        train_ds, val_split = random_split(
+            dataset, [train_size, val_size],
+            generator=torch.Generator().manual_seed(42),
+        )
 
         # Build a separate no-augmentation dataset for validation using the same indices.
         # random_split returns Subsets sharing the original dataset object, so mutating

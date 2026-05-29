@@ -25,7 +25,14 @@ class MammographyDataset(Dataset):
         ann_path = os.path.join(client_dir, "annotations.csv")
         df = pd.read_csv(ann_path)
         self.df = df
-        self.image_names = df["image_name"].unique().tolist()
+        all_names = df["image_name"].unique().tolist()
+        self.image_names = [
+            n for n in all_names
+            if os.path.isfile(os.path.join(self.images_dir, n))
+        ]
+        missing = len(all_names) - len(self.image_names)
+        if missing:
+            print(f"[Dataset] {client_dir}: {missing}/{len(all_names)} images missing on disk, skipping them.")
 
     # ------------------------------------------------------------------
     def _create_mask(self, h: int, w: int, rows: pd.DataFrame) -> np.ndarray:
