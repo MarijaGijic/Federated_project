@@ -17,14 +17,15 @@ def weighted_average(metrics: List[Tuple[int, Dict]]) -> Dict:
     return aggregated
 
 
-def fit_config(server_round: int) -> Dict:
-    return {"local_epochs": 3, "server_round": server_round}
+def fit_config(server_round: int, local_epochs: int) -> Dict:
+    return {"local_epochs": local_epochs, "server_round": server_round}
 
 
 def build_strategy(
     num_clients: int,
     fraction_fit: float = 1.0,
     fraction_evaluate: float = 1.0,
+    local_epochs: int = 3,
     model_save_path: Optional[str] = None,
     unet_config: Optional[dict] = None,
 ) -> fl.server.strategy.Strategy:
@@ -43,7 +44,7 @@ def build_strategy(
         min_fit_clients=num_clients,
         min_evaluate_clients=num_clients,
         min_available_clients=num_clients,
-        on_fit_config_fn=fit_config,
+        on_fit_config_fn=lambda server_round: fit_config(server_round, local_epochs),
         evaluate_metrics_aggregation_fn=weighted_average,
         fit_metrics_aggregation_fn=weighted_average,
     )

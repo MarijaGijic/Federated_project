@@ -63,6 +63,7 @@ def main():
         num_clients=num_clients,
         fraction_fit=cfg["federated"]["fraction_fit"],
         fraction_evaluate=cfg["federated"]["fraction_evaluate"],
+        local_epochs=cfg["training"]["local_epochs"],
         model_save_path=os.path.join(ROOT, cfg["output"]["model_save_dir"]),
         unet_config=cfg["model"],
     )
