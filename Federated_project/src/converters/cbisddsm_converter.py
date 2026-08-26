@@ -16,12 +16,12 @@ Expected raw layout (Kaggle dataset: awsaf49/cbis-ddsm-breast-cancer-image-datas
                 1-NNN.jpg
                 ...
 
-Images are JPEGs organised by Series UID. dicom_info.csv maps UIDs to paths.
-The mass/calc CSVs reference UIDs in their image_file_path column (index 1 when
-split by "/"), which are looked up in the dicom_info mapping.
+Images are JPEGs organised by Series UID. dicom_info.csv maps exact study/series
+pairs to paths. The mass/calc CSV paths contain both identifiers.
 """
 
 from pathlib import Path
+import hashlib
 import numpy as np
 import pandas as pd
 import cv2
@@ -42,34 +42,72 @@ def _bbox_from_mask(mask_arr: np.ndarray):
     return int(cmin), int(rmin), int(cmax - cmin + 1), int(rmax - rmin + 1)
 
 
-def _uid_from_csv_path(csv_path_value: str) -> str:
-    """Extract the Series UID from a CSV image_file_path entry."""
-    parts = str(csv_path_value).strip().split("/")
-    # path format: <Case_folder>/<SeriesUID>/<filename>
-    return parts[2] if len(parts) >= 3 else ""
+def _study_series_from_csv_path(csv_path_value: str) -> tuple[str, str]:
+    """Extract (StudyInstanceUID, SeriesInstanceUID) from a lesion CSV path."""
+    parts = [part.strip() for part in str(csv_path_value).strip().replace("\\", "/").split("/")]
+    if len(parts) < 4 or not parts[1] or not parts[2]:
+        return "", ""
+    return parts[1], parts[2]
 
 
-def _build_uid_map(dicom_info_path: Path, jpeg_base: Path, series_desc: str) -> dict:
-    """Return {uid: absolute_jpeg_path} for a given SeriesDescription."""
-    df = pd.read_csv(dicom_info_path)
-    subset = df[df["SeriesDescription"] == series_desc]
-    uid_map = {}
-    for _, row in subset.iterrows():
-        uid = str(row["SeriesInstanceUID"]).strip()
-        # image_path in CSV is like CBIS-DDSM/jpeg/<uid>/<file>.jpg
-        rel = str(row["image_path"]).strip()
-        filename = Path(rel).name
-        abs_path = jpeg_base / uid / filename
-        if abs_path.exists():
-            uid_map[uid] = abs_path
-        else:
-            # fall back to first jpg in that uid folder
-            uid_dir = jpeg_base / uid
-            if uid_dir.is_dir():
-                hits = list(uid_dir.glob("*.jpg")) or list(uid_dir.glob("*.jpeg"))
-                if hits:
-                    uid_map[uid] = hits[0]
-    return uid_map
+def _jpeg_path_from_image_path(image_path: str, jpeg_base: Path):
+    """Translate an exact dicom_info image_path to its local JPEG path."""
+    parts = Path(str(image_path).strip().replace("\\", "/")).parts
+    try:
+        jpeg_index = parts.index("jpeg")
+    except ValueError:
+        return None
+    suffix = parts[jpeg_index + 1:]
+    return jpeg_base.joinpath(*suffix) if suffix else None
+
+
+def _build_dicom_index(dicom_info_path: Path, jpeg_base: Path) -> dict:
+    """Index dicom_info rows by exact (StudyInstanceUID, SeriesInstanceUID)."""
+    df = pd.read_csv(dicom_info_path, keep_default_na=False)
+    index = {}
+    for _, row in df.iterrows():
+        study_uid = str(row["StudyInstanceUID"]).strip()
+        series_uid = str(row["SeriesInstanceUID"]).strip()
+        if not study_uid or not series_uid:
+            continue
+        candidate = {
+            "series_description": str(row["SeriesDescription"]).strip().lower(),
+            "image_path": _jpeg_path_from_image_path(row["image_path"], jpeg_base),
+        }
+        index.setdefault((study_uid, series_uid), []).append(candidate)
+    return index
+
+
+def _resolve_full_image(dicom_index: dict, study_uid: str, series_uid: str):
+    """Resolve one exact full-mammogram metadata row."""
+    candidates = dicom_index.get((study_uid, series_uid), [])
+    if not candidates:
+        return "unresolved", None
+    if len(candidates) != 1:
+        return "ambiguous", None
+    return "resolved", candidates[0]["image_path"]
+
+
+def _resolve_roi_image(dicom_index: dict, study_uid: str, series_uid: str):
+    """Resolve one exact non-cropped ROI-mask metadata row."""
+    candidates = [
+        candidate
+        for candidate in dicom_index.get((study_uid, series_uid), [])
+        if candidate["series_description"] != "cropped images"
+    ]
+    if not candidates:
+        return "unresolved", None
+    if len(candidates) != 1:
+        return "ambiguous", None
+    return "resolved", candidates[0]["image_path"]
+
+
+def _output_identity(
+    patient_id: str, laterality: str, view: str, study_uid: str, series_uid: str
+) -> str:
+    """Return a stable, compact identity for one physical mammogram."""
+    digest = hashlib.sha1(f"{study_uid}|{series_uid}".encode("utf-8")).hexdigest()[:12]
+    return f"{patient_id}_{laterality}_{view}_{digest}"
 
 
 class CBISDDSMConverter(BaseConverter):
@@ -82,10 +120,21 @@ class CBISDDSMConverter(BaseConverter):
         self.csv_dir  = Path(raw_path) / "csv"
         jpeg_base     = Path(raw_path) / "jpeg"
         dicom_info    = self.csv_dir / "dicom_info.csv"
-        self.full_mammo_map = _build_uid_map(dicom_info, jpeg_base, "full mammogram images")
-        self.roi_map        = _build_uid_map(dicom_info, jpeg_base, "ROI mask images")
+        self.dicom_index = _build_dicom_index(dicom_info, jpeg_base)
         self.records = []
         self.saved_images = set()  # track already-saved mammograms to avoid duplicates
+        self.audit = {
+            "full_metadata_unresolved": 0,
+            "full_metadata_ambiguous": 0,
+            "full_image_missing": 0,
+            "full_image_unreadable": 0,
+            "roi_metadata_unresolved": 0,
+            "roi_metadata_ambiguous": 0,
+            "roi_image_missing": 0,
+            "roi_image_unreadable": 0,
+            "empty_or_invalid_roi": 0,
+            "retained_annotations": 0,
+        }
 
     def convert(self):
         csv_files = [
@@ -104,6 +153,9 @@ class CBISDDSMConverter(BaseConverter):
 
         save_annotations_csv(self.records, self.annotations_file, columns=CANONICAL_COLUMNS)
         print(f"CBIS-DDSM: saved {len(self.records)} annotations → {self.annotations_file}")
+        print("CBIS-DDSM audit summary:")
+        for key, value in self.audit.items():
+            print(f"  {key}: {value}")
 
     def _process_csv(self, csv_path: Path, abnormality_type: str):
         df = pd.read_csv(csv_path)
@@ -116,48 +168,98 @@ class CBISDDSMConverter(BaseConverter):
 
     def _process_row(self, row: pd.Series, abnormality_type: str):
         # ── Full mammogram ────────────────────────────────────────────────
-        img_uid = _uid_from_csv_path(row.get("image_file_path", ""))
-        img_path = self.full_mammo_map.get(img_uid)
-        if img_path is None:
-            print(f"  [CBIS-DDSM] Full image not found for UID: {img_uid}")
+        study_uid, series_uid = _study_series_from_csv_path(
+            row.get("image_file_path", "")
+        )
+        full_status, img_path = _resolve_full_image(
+            self.dicom_index, study_uid, series_uid
+        )
+        if full_status != "resolved":
+            self.audit[f"full_metadata_{full_status}"] += 1
+            print(
+                f"  [CBIS-DDSM] Full metadata {full_status}: "
+                f"study={study_uid} series={series_uid}"
+            )
+            return
+        if img_path is None or not img_path.is_file():
+            self.audit["full_image_missing"] += 1
+            print(f"  [CBIS-DDSM] Full image missing: {img_path}")
             return
 
         image = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
         if image is None:
+            self.audit["full_image_unreadable"] += 1
+            print(f"  [CBIS-DDSM] Full image unreadable: {img_path}")
             return
 
-        patient_id = str(row.get("patient_id", img_uid)).replace(" ", "_")
-        view       = str(row.get("image_view", row.get("view", ""))).strip()
-        laterality = str(row.get("left_or_right_breast", row.get("side", ""))).strip()
-        prefix   = f"{patient_id}_{laterality}_{view}"
-        img_name = f"{prefix}.png"
-
-        if prefix not in self.saved_images:
-            save_png_img(image, self.images_dir, prefix)
-            self.saved_images.add(prefix)
+        patient_id = str(row.get("patient_id", series_uid)).replace(" ", "_")
+        view = str(row.get("image_view", row.get("view", ""))).strip()
+        laterality = str(
+            row.get("left_or_right_breast", row.get("side", ""))
+        ).strip()
+        image_identity = _output_identity(
+            patient_id, laterality, view, study_uid, series_uid
+        )
+        img_name = f"{image_identity}.png"
 
         # ── Bounding box from ROI mask ────────────────────────────────────
-        bbox_xmin = bbox_ymin = bbox_w = bbox_h = np.nan
-        mask_uid  = _uid_from_csv_path(row.get("roi_mask_file_path", ""))
-        mask_path = self.roi_map.get(mask_uid)
-        if mask_path is not None:
-            mask_arr = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
-            if mask_arr is not None:
-                if mask_arr.shape != image.shape:
-                    mask_arr = cv2.resize(
-                        mask_arr, (image.shape[1], image.shape[0]),
-                        interpolation=cv2.INTER_NEAREST,
-                    )
-                bbox = _bbox_from_mask(mask_arr)
-                if bbox:
-                    bbox_xmin, bbox_ymin, bbox_w, bbox_h = bbox
+        roi_study_uid, roi_series_uid = _study_series_from_csv_path(
+            row.get("roi_mask_file_path", "")
+        )
+        roi_status, mask_path = _resolve_roi_image(
+            self.dicom_index, roi_study_uid, roi_series_uid
+        )
+        if roi_status != "resolved":
+            self.audit[f"roi_metadata_{roi_status}"] += 1
+            print(
+                f"  [CBIS-DDSM] ROI metadata {roi_status}: "
+                f"study={roi_study_uid} series={roi_series_uid}"
+            )
+            return
+        if mask_path is None or not mask_path.is_file():
+            self.audit["roi_image_missing"] += 1
+            print(f"  [CBIS-DDSM] ROI image missing: {mask_path}")
+            return
 
-        # ── Metadata ──────────────────────────────────────────────────────
+        mask_arr = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        if mask_arr is None:
+            self.audit["roi_image_unreadable"] += 1
+            print(f"  [CBIS-DDSM] ROI image unreadable: {mask_path}")
+            return
+
+        if mask_arr.shape != image.shape:
+            mask_arr = cv2.resize(
+                mask_arr, (image.shape[1], image.shape[0]),
+                interpolation=cv2.INTER_NEAREST,
+            )
+        bbox = _bbox_from_mask(mask_arr)
+        if bbox is None:
+            self.audit["empty_or_invalid_roi"] += 1
+            print(f"  [CBIS-DDSM] Empty or invalid ROI: {mask_path}")
+            return
+        bbox_xmin, bbox_ymin, bbox_w, bbox_h = bbox
+        if (
+            bbox_xmin < 0
+            or bbox_ymin < 0
+            or bbox_w <= 0
+            or bbox_h <= 0
+            or bbox_xmin + bbox_w > image.shape[1]
+            or bbox_ymin + bbox_h > image.shape[0]
+        ):
+            self.audit["empty_or_invalid_roi"] += 1
+            print(f"  [CBIS-DDSM] Empty or invalid ROI: {mask_path}")
+            return
+
+        if image_identity not in self.saved_images:
+            save_png_img(image, self.images_dir, image_identity)
+            self.saved_images.add(image_identity)
+
         self.records.append(normalize_row({
-            "image_name":  img_name,
-            "bbox_xmin":   bbox_xmin,
-            "bbox_ymin":   bbox_ymin,
-            "bbox_width":  bbox_w,
+            "image_name": img_name,
+            "bbox_xmin": bbox_xmin,
+            "bbox_ymin": bbox_ymin,
+            "bbox_width": bbox_w,
             "bbox_height": bbox_h,
             "dataset_name": "CBIS-DDSM",
         }))
+        self.audit["retained_annotations"] += 1

@@ -75,11 +75,14 @@ def main():
     print(f"  Local epochs : {cfg['training']['local_epochs']}")
     print(f"  Image size   : {cfg['data']['image_size']}x{cfg['data']['image_size']}\n")
 
-    # Run 1 client at a time: num_gpus=1.0 caps concurrency to 1 (one GPU total),
-    # which prevents parallel clients from exhausting RAM on constrained runtimes.
+    # A full GPU serializes GPU clients; on CPU-only machines, requesting all
+    # logical CPUs serializes clients to avoid concurrent actors exhausting RAM.
     import torch
-    num_gpus = 1.0 if torch.cuda.is_available() else 0.0
-    client_resources = {"num_cpus": 1, "num_gpus": num_gpus}
+    if torch.cuda.is_available():
+        client_resources = {"num_cpus": 1, "num_gpus": 1.0}
+    else:
+        client_resources = {"num_cpus": os.cpu_count() or 1, "num_gpus": 0.0}
+    print(f"  Client resources: {client_resources}")
 
     history = fl.simulation.start_simulation(
         client_fn=client_fn,
