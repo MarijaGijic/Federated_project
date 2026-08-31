@@ -27,6 +27,11 @@ def save_png_img(image, images_dir, prefix):
     cv2.imwrite(img_path, image)
     return img_path
 
-def save_annotations_csv(records, path):
+def save_annotations_csv(records, path, columns=None):
     df = pd.DataFrame(records)
+    if columns:
+        for col in columns:
+            if col not in df.columns:
+                df[col] = None
+        df = df[columns]
     df.to_csv(path, index=False)

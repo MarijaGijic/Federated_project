@@ -1,6 +1,11 @@
 import os
+import sys
 import argparse
-from converters.inbreast_converter import INbreastConverter
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
+
+from src.converters.inbreast_converter import INbreastConverter
 
 def main():
     parser = argparse.ArgumentParser(description="Prepare INbreast dataset for federated learning")
@@ -22,6 +27,10 @@ def main():
         required=True,
         help="Path to INbreast.xls file with metadata"
     )
+    parser.add_argument(
+        "--target_size", type=int, default=256,
+        help="Target U-Net mask size used to preserve point annotations (default: 256)"
+    )
     args = parser.parse_args()
 
     # Create output folder if it doesn't exist
@@ -31,7 +40,8 @@ def main():
     converter = INbreastConverter(
         raw_path=args.raw_path,
         client_output_path=args.output_path,
-        excel_path=args.excel_path
+        excel_path=args.excel_path,
+        target_size=args.target_size,
     )
     converter.convert()
 

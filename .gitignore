@@ -1,12 +1,3 @@
 data/
 *.png
 *.csv
-.venv/
-__pycache__/
-*.py[cod]
-raw_data/
-Federated_project/.venv/
-results/
-results_*/
-Federated_project/results/
-Federated_project/results_*/
