@@ -74,6 +74,14 @@ def check_and_fix_row(row: dict, images_dir: str) -> tuple[dict, list[str]]:
                 warnings.append(f"NEGATIVE_BBOX    {img}: {coord}={val:.1f} → clipped to 0")
                 row[coord] = 0.0
 
+        width = row.get("bbox_width")
+        height = row.get("bbox_height")
+        if ((not pd.isna(width) and width <= 0)
+                or (not pd.isna(height) and height <= 0)):
+            warnings.append(
+                f"NONPOSITIVE_BBOX_SIZE  {img}: width={width}, height={height}"
+            )
+
         if img_h is not None:
             x, y = float(row.get("bbox_xmin", 0)), float(row.get("bbox_ymin", 0))
             w, h = float(row.get("bbox_width", 0)), float(row.get("bbox_height", 0))

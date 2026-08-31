@@ -103,8 +103,11 @@ def validate_dataframe(df: pd.DataFrame, images_dir: str) -> list[str]:
         if row['label'] not in (0, 1):
             issues.append(f"{row['image_name']}: invalid label {row['label']}")
         if row['label'] == 1:
-            for coord in ["bbox_xmin", "bbox_ymin", "bbox_width", "bbox_height"]:
+            for coord in ["bbox_xmin", "bbox_ymin"]:
                 if pd.isna(row[coord]) or row[coord] < 0:
                     issues.append(f"{row['image_name']}: bad {coord}")
+            for dimension in ["bbox_width", "bbox_height"]:
+                if pd.isna(row[dimension]) or row[dimension] <= 0:
+                    issues.append(f"{row['image_name']}: bad {dimension}")
 
     return issues

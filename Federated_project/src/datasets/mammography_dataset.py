@@ -42,8 +42,17 @@ class MammographyDataset(Dataset):
                 continue
             x = max(0, int(row["bbox_xmin"]))
             y = max(0, int(row["bbox_ymin"]))
-            bw = max(1, int(row["bbox_width"]))
-            bh = max(1, int(row["bbox_height"]))
+            if pd.isna(row.get("bbox_width")) or pd.isna(row.get("bbox_height")):
+                raise ValueError(
+                    f"Positive annotation for {row['image_name']} has missing bbox dimensions"
+                )
+            bw = int(row["bbox_width"])
+            bh = int(row["bbox_height"])
+            if bw <= 0 or bh <= 0:
+                raise ValueError(
+                    f"Positive annotation for {row['image_name']} has "
+                    f"nonpositive bbox size: {bw}x{bh}"
+                )
             mask[y: y + bh, x: x + bw] = 1.0
         return mask
 
