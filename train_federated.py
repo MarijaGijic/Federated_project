@@ -14,6 +14,7 @@ import sys
 
 import yaml
 import flwr as fl
+from flwr.common import Context
 
 # ── Path setup ────────────────────────────────────────────────────────────────
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -53,7 +54,8 @@ def main():
     }
 
     # ── Client factory ────────────────────────────────────────────────────────
-    def client_fn(cid: str) -> fl.client.Client:
+    def client_fn(context: Context) -> fl.client.Client:
+        cid = str(context.node_config["partition-id"])
         client_dir = client_dirs[int(cid)]
         print(f"  [Client {cid}] Loading data from: {client_dir}")
         return MammographyClient(client_dir, client_cfg).to_client()
