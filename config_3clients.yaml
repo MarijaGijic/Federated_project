@@ -11,12 +11,12 @@ model:
   features: [32, 64, 128, 256]
 
 training:
-  local_epochs: 1
+  local_epochs: 3
   batch_size: 2
   learning_rate: 0.001
 
 federated:
-  num_rounds: 1
+  num_rounds: 4
   fraction_fit: 1.0
   fraction_evaluate: 1.0
 
